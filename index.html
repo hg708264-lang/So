@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>감천문화마을 소방 지킴이</title>
+<style>
+:root{--bg:#fff8ec;--tx:#2b2118;--card:#fff;--ac:#e8452c;--bd:#e5d5bd;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1814;--tx:#f5ece0;--card:#2a231d;--bd:#4a3e33}}
+*{box-sizing:border-box}html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--tx);font-family:-apple-system,"Noto Sans KR",sans-serif;display:flex;flex-direction:column}
+#top{display:flex;justify-content:space-between;padding:10px 14px;font-weight:800}
+#tm{color:var(--ac)}
+#msg{padding:0 14px 8px;font-size:14px;min-height:22px}
+#wrap{flex:1;margin:0 10px;border-radius:14px;overflow:auto;border:3px solid var(--bd);min-height:0}
+#map{position:relative;width:900px;height:634px;touch-action:manipulation;overflow:hidden}
+.ent{position:absolute;transform:translate(-50%,-50%);text-align:center;line-height:1;white-space:nowrap}
+.ent .e{font-size:28px;display:block;filter:drop-shadow(0 2px 2px #0006)}.ent small{display:block;font-size:11px;font-weight:700;background:#fffe;color:#222;border-radius:6px;padding:2px 5px;margin-top:2px}
+.q .e{animation:b 1s infinite}@keyframes b{50%{transform:translateY(-8px)}}
+.fire{cursor:pointer}.fire .cd{display:block;font-size:20px;font-weight:900;color:#fff;background:#e8452c;border-radius:50%;width:26px;height:26px;line-height:26px;margin:0 auto}
+.fire.big .e{font-size:56px;filter:drop-shadow(0 0 10px red) drop-shadow(0 0 18px orange);animation:s .25s infinite alternate}
+.fire.big .cd{width:auto;border-radius:8px;padding:0 6px;font-size:13px;background:#8b0000}
+@keyframes s{to{transform:scale(1.12)}}
+.au{position:absolute;left:50%;top:50%;width:48px;height:48px;border-radius:50%;background:radial-gradient(#ff3b1f99,#ff3b1f33 65%,transparent);transform:translate(-50%,-50%);z-index:-1;pointer-events:none;transition:.5s}.tk{cursor:pointer;z-index:3}.tk.sel .e{filter:drop-shadow(0 0 6px #2a7de1) drop-shadow(0 0 10px #2a7de1)}
+#me{z-index:5}#me .e{font-size:30px}#arr{position:absolute;left:50%;top:50%;font-size:18px;color:#e8452c;font-weight:900;transition:transform .1s}
+.pp{position:absolute;left:26px;top:-22px;font-size:26px;animation:out .6s both}@keyframes out{from{transform:scale(.2);opacity:0}to{transform:none;opacity:1}}
+#bar{padding:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;align-items:center}
+#dp{display:grid;grid-template-columns:repeat(3,56px);grid-template-rows:repeat(2,50px);gap:6px}
+#dp button{padding:0;font-size:22px;touch-action:none}
+button{font:inherit;font-weight:700;border:2px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;padding:10px 14px}
+button.p{background:var(--ac);border-color:var(--ac);color:#fff}button.sel{outline:3px solid var(--ac)}button:disabled{opacity:.4}
+#modal{position:fixed;inset:0;background:#0009;display:none;align-items:center;justify-content:center;padding:20px;z-index:20}
+#box{background:var(--card);border-radius:16px;padding:20px;max-width:420px;width:100%;max-height:85%;overflow:auto}
+#box h3{margin:0 0 10px}#box p{line-height:1.55;margin:0 0 12px}#box button{display:block;width:100%;margin-top:8px;text-align:left}
+#alert{position:fixed;left:50%;top:60px;transform:translateX(-50%);z-index:30;background:#b00020;color:#fff;padding:14px 18px;border-radius:14px;font-weight:800;text-align:center;max-width:90%;box-shadow:0 6px 24px #0007;display:none;pointer-events:none;line-height:1.5}
+</style></head><body>
+<div id="top"><span>🏘️</span><span id="tm">⏱ 200초</span><span id="bn"></span><span id="coin">🪙 0</span></div>
+<div id="msg"></div>
+<div id="wrap"><div id="map"></div></div>
+<div id="bar"></div>
+<div id="alert"></div>
+<div id="modal"><div id="box"></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const map=$('#map'),wrap=$('#wrap'),box=$('#box'),modal=$('#modal');
+const QS=[
+{q:"불이 난 것을 발견했을 때 가장 먼저 해야 할 일은?",a:["혼자 끄려고 시도한다","큰 소리로 알리고 119에 신고한다","짐부터 챙긴다"],c:1},
+{q:"소화기 사용 순서로 맞는 것은?",a:["안전핀 뽑기 → 호스를 불 쪽으로 → 손잡이 누르기","손잡이 누르기 → 안전핀 뽑기","호스를 위로 향하고 던진다"],c:0},
+{q:"연기가 가득한 곳에서 대피하는 올바른 자세는?",a:["똑바로 서서 뛴다","젖은 수건으로 코와 입을 막고 낮은 자세로 이동","숨을 크게 들이마신다"],c:1},
+{q:"멀티탭 하나에 여러 전기제품을 꽂아 쓰면?",a:["과열로 화재 위험이 커진다","전기료가 줄어든다","아무 문제 없다"],c:0},
+{q:"골목길에 불법 주차를 하면 안 되는 이유는?",a:["미관에 좋지 않아서","소방차 진입을 막아 골든타임을 놓칠 수 있어서","주차 요금이 비싸서"],c:1},
+{q:"화재 시 건물에서 대피할 때 이용해야 하는 것은?",a:["엘리베이터","계단","창문으로 뛰어내리기"],c:1}];
+const QP=[[66,24,'어린왕자 탑'],[52,31,'행복우체통'],[55,46,'햇볕작은도서관'],[80,56,'안내센터'],[41,58,'대극문화홍보관'],[30,76,'아랫마을입구']];
+const FP=[[56,54],[85,36],[74,20],[29,51],[62,74]];
+const RANGE=280;
+let coins=0,solved=0,ext=0,tank=0,tankUses=0,toPlace=0,left=5,tool='ext',phase='intro',fires=[],tanks=[],selT=null,qEls=[],busy=false,time=200,gt=null;
+const me={x:74,y:52};
+// ---- 배경 그리기 ----
+(function(){let sd=7;const R=()=>(sd=sd*16807%2147483647)/2147483647;
+const pts=[...QP,...FP,[74,52]].map(p=>[p[0]*9,p[1]*6.34]);
+const pal=['#f28b82','#fbbc04','#81c995','#78d9ec','#c58af9','#ff8bcb','#ffcb74','#ff9f5a'];
+let s=`<svg viewBox="0 0 900 634" width="900" height="634" style="position:absolute;inset:0"><defs><linearGradient id="sk" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5fbcf2"/><stop offset="1" stop-color="#e2f5fc"/></linearGradient></defs>
+<rect width="900" height="634" fill="#7fbf63"/><rect width="900" height="130" fill="url(#sk)"/><circle cx="810" cy="48" r="28" fill="#ffe27a"/>
+<ellipse cx="150" cy="40" rx="50" ry="14" fill="#fff"/><ellipse cx="420" cy="62" rx="60" ry="15" fill="#fff"/>
+<path d="M0 130 Q150 70 300 118 T600 108 T900 115 V150 H0Z" fill="#4f9b63"/>`;
+[170,250,330,410,490,570].forEach((y,i)=>s+=`<path d="M0 ${y} Q300 ${y-18} 600 ${y} T900 ${y-6} V640 H0Z" fill="${i%2?'#94c76d':'#86bb5f'}"/><path d="M0 ${y} Q300 ${y-18} 600 ${y} T900 ${y-6}" stroke="#6a9a4c" stroke-width="5" fill="none"/>`);
+for(let i=0;i<40;i++){const x=R()*900,y=150+R()*470;if(pts.some(p=>Math.hypot(p[0]-x,p[1]-y)<35))continue;s+=`<rect x="${x-2}" y="${y}" width="4" height="12" fill="#6b4a2b"/><circle cx="${x}" cy="${y-4}" r="${9+R()*6}" fill="#3f8f4a"/>`}
+for(let i=0;i<95;i++){const x=20+R()*830,y=160+R()*430;if(pts.some(p=>Math.hypot(p[0]-x,p[1]-y)<42))continue;const w=34+R()*18,h=24+R()*12,c=pal[i%8];
+s+=`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="${c}"/><path d="M${x-4} ${y} L${x+w/2} ${y-15} L${x+w+4} ${y}Z" fill="#a8483a"/><rect x="${x+5}" y="${y+6}" width="9" height="9" fill="#fff9"/><rect x="${x+w/2+2}" y="${y+h-14}" width="10" height="14" fill="#6b4a2b"/>`}
+const rd=['M270 482C300 420 330 400 369 368S470 320 495 292S460 230 468 196S560 170 594 152','M495 292C560 300 620 320 666 330L720 355','M666 330C700 300 740 260 765 228','M594 152C630 140 650 135 666 127','M369 368C320 340 290 330 261 323','M495 292C500 320 504 330 504 342C520 420 540 450 558 469','M270 482C400 500 500 480 558 469'];
+rd.forEach(d=>s+=`<path d="${d}" stroke="#b9782f" stroke-width="24" fill="none" stroke-linecap="round"/>`);
+rd.forEach(d=>s+=`<path d="${d}" stroke="#f2b15a" stroke-width="18" fill="none" stroke-linecap="round"/><path d="${d}" stroke="#fff7" stroke-width="2" stroke-dasharray="10 12" fill="none"/>`);
+[[666,350,'마을입구'],[270,505,'아랫마을입구']].forEach(a=>s+=`<rect x="${a[0]-42}" y="${a[1]-12}" width="84" height="24" rx="5" fill="#8a5a2b" stroke="#fff" stroke-width="2"/><text x="${a[0]}" y="${a[1]+5}" font-size="13" font-weight="700" fill="#fff" text-anchor="middle">${a[2]}</text>`);
+map.innerHTML=s+`</svg><svg id="hs" viewBox="0 0 900 634" style="position:absolute;inset:0;z-index:4;pointer-events:none"></svg>`})();
+function ent(h,c,x,y){const e=document.createElement('div');e.className='ent '+c;e.innerHTML=h;e.style.left=x+'%';e.style.top=y+'%';map.appendChild(e);return e}
+const meEl=ent('<span class="e">🧑‍🚒</span><span id="arr">➤</span>','',me.x,me.y);meEl.id='me';
+const say=t=>$('#msg').textContent=t, upd=()=>$('#coin').textContent='🪙 '+coins;
+function show(h){box.innerHTML=h;modal.style.display='flex'}const hide=()=>modal.style.display='none';
+function follow(){wrap.scrollTo({left:me.x/100*900-wrap.clientWidth/2,top:me.y/100*634-wrap.clientHeight/2})}
+function intro(){show(`<h3>🔥 감천문화마을 소방 지킴이</h3><p>감천문화마을은 <b>고지대</b>에 있고 <b>골목이 좁아</b> 소방차가 들어오기 어려워요. 불이 나면 주민 스스로 초기에 끄는 것이 매우 중요합니다!</p><p>⏱ <b>제한시간 200초</b> 안에 문제 6개를 풀고, 물탱크와 소화기를 준비해 불을 모두 끄세요.</p><button class="p" id="go">시작하기</button>`);
+$('#go').onclick=()=>{hide();startQuiz();gt=setInterval(()=>{time--;$('#tm').textContent='⏱ '+time+'초';if(time<=0)end(`<h3>⏰ 시간 초과!</h3><p>200초 안에 불을 다 끄지 못했어요. 다시 도전해 보세요!</p><button class="p" id="rs">다시 도전</button>`)},1000)}}
+function startQuiz(){phase='quiz';say('화살표로 이동해 ❓에 다가가 보세요!');
+QP.forEach((p,i)=>qEls[i]={e:ent(`<span class="e">❓</span><small>${p[2]}</small>`,'q',p[0],p[1]),p,done:false});bar();follow()}
+// 이동
+const DIR={up:[0,-1,-90],down:[0,1,90],left:[-1,0,180],right:[1,0,0]};let mv=null;
+function step(d){if((phase!='quiz'&&phase!='place')||busy)return;const v=DIR[d];
+me.x=Math.max(3,Math.min(97,me.x+v[0]*.7));me.y=Math.max(4,Math.min(96,me.y+v[1]*.7));
+meEl.style.left=me.x+'%';meEl.style.top=me.y+'%';$('#arr').style.transform=`translate(-50%,-50%) rotate(${v[2]}deg) translateX(26px)`;follow();if(phase=='quiz')near()}
+function hold(d){stop();step(d);mv=setInterval(()=>step(d),45)}function stop(){clearInterval(mv)}
+addEventListener('pointerup',stop);
+addEventListener('keydown',e=>{const m={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right'}[e.key];if(m){e.preventDefault();step(m)}});
+function near(){qEls.forEach((q,i)=>{if(!q.done&&!busy&&Math.hypot(me.x-q.p[0],(me.y-q.p[1])*.7)<5.5)ask(i)})}
+function ask(i){busy=true;stop();const Q=QS[i];
+show(`<h3>문제 ${solved+1} / 6</h3><p>${Q.q}</p>`+Q.a.map((a,k)=>`<button data-k="${k}">${a}</button>`).join(''));
+box.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+if(+b.dataset.k==Q.c){coins+=100;solved++;qEls[i].done=true;qEls[i].e.remove();upd();hide();busy=false;
+say(`정답! 🪙+100 (남은 문제 ${6-solved}개)`);if(solved==6){phase='shop';say('모든 문제 완료! 소화 물품을 구입하세요.');bar()}}
+else{b.disabled=true;b.textContent+=' ❌ 다시 생각해 보세요'}})}
+const DPAD=`<div id="dp"><span></span><button data-d="up">▲</button><span></span><button data-d="left">◀</button><button data-d="down">▼</button><button data-d="right">▶</button></div>`;
+function wire(b){b.querySelectorAll('[data-d]').forEach(x=>{x.onpointerdown=e=>{e.preventDefault();hold(x.dataset.d)};x.onpointerleave=stop})}
+function bar(){const b=$('#bar');
+if(phase=='quiz'){b.innerHTML=DPAD;wire(b)}
+else if(phase=='shop'){b.innerHTML=`<button id="bt">💧 물탱크 (400코인)<br><small>1개 구입 = 3곳 설치 · 물 4회</small></button><button id="be">🧯 투척용 소화기 (50코인)</button><button class="p" id="gf">🔥 다음 단계</button>
+<div style="width:100%;text-align:center;font-size:14px">보유: 물탱크 ${tank} · 소화기 ${ext}</div>`;
+$('#bt').disabled=coins<400;$('#be').disabled=coins<50;
+$('#bt').onclick=()=>{coins-=400;tank++;upd();bar()};$('#be').onclick=()=>{coins-=50;ext++;upd();bar()};
+$('#gf').onclick=()=>tank>0?startPlace():startFire()}
+else if(phase=='place'){b.innerHTML=DPAD+`<div style="display:flex;flex-direction:column;gap:6px"><button id="pl">💧 여기에 설치 (남은 ${toPlace})</button><button class="p" id="g2">🔥 출동!</button></div>`;wire(b);
+$('#pl').disabled=toPlace<=0;$('#pl').onclick=()=>{const t={x:me.x,y:me.y};t.e=ent('<span class="e">🛢️</span><small>물탱크</small>','tk',t.x,t.y);tanks.push(t);toPlace--;say(`물탱크 설치! 호스가 닿는 범위를 생각해 곳곳에 놓으세요. (남은 ${toPlace})`);bar();if(!toPlace)setTimeout(startFire,500)};
+$('#g2').onclick=startFire}
+else if(phase=='fire'){b.innerHTML=`<button id="te" class="${tool=='ext'?'sel':''}">🧯 소화기 ${ext}개</button><button id="tt" class="${tool=='tank'?'sel':''}">💧 물탱크 연결 (물 ${tankUses}회)</button><button id="c119" class="p" ${called?'disabled':''}>${called?'🚒 도착까지 '+eta+'초':'📞 119 신고'}</button>`;$('#c119').onclick=call119;
+$('#te').onclick=()=>{tool='ext';say('작은 불을 터치해 소화기를 던지세요!');bar()};$('#tt').onclick=()=>{tool='tank';say('설치한 물탱크 🛢️를 먼저 터치한 뒤 불을 터치하세요!');bar()}}
+else b.innerHTML=''}
+let called=false,eta=40,ci=null,bt=null,gi=null;
+function sz(f){const e=f.e;e.querySelector('.e').style.fontSize=Math.min(28*f.lvl,112)+'px';const a=e.querySelector('.au');a.style.width=a.style.height=48*f.lvl+'px';if(f.big)e.querySelector('.cd').textContent='세기 ×'+f.lvl}
+function warn(h){const a=$('#alert');a.innerHTML=h;a.style.display='block';clearTimeout(a.t);a.t=setTimeout(()=>a.style.display='none',2500)}
+function burn(){let c=0,t=0;for(let x=15;x<900;x+=30)for(let y=15;y<634;y+=30){t++;if(fires.some(f=>!f.out&&Math.hypot(x-f.x*9,y-f.y*6.34)<24*f.lvl))c++}
+const p=Math.round(c/t*100);$('#bn').textContent='🔥 '+p+'%';if(p>=50&&phase=='fire')end(`<h3>🔥 마을이 불에 잠식됐어요!</h3><p>불이 마을의 절반 이상으로 번졌어요. 119 신고와 초기 진압을 서두르세요!</p><button class="p" id="rs">다시 도전</button>`)}
+function call119(){if(called||phase!='fire')return;called=true;eta=40;say('📞 119 신고 완료! 소방차가 40초 뒤 도착해요. 그동안 불을 막으세요!');bar();ci=setInterval(()=>{eta--;if(phase!='fire'){clearInterval(ci);return}if(eta<=0){clearInterval(ci);arrive()}else bar()},1000)}
+function arrive(){const t={x:74,y:52};ent('<span class="e">🚒</span><small>소방차 도착!</small>','',t.x,t.y);say('🚒 소방차 도착! 소방관들이 남은 불을 진압해요!');fires.filter(f=>!f.out).forEach((f,i)=>setTimeout(()=>{if(phase=='fire'&&!f.out){hose(t,f);put(f)}},i*700+300))}
+function startPlace(){phase='place';toPlace=tank*3;tankUses=tank*4;say(`물탱크를 ${toPlace}곳에 설치하세요! 이동 후 "여기에 설치"를 누르세요.`);bar()}
+// 화재
+function startFire(){if(phase=='fire')return;phase='fire';stop();tankUses=tank*4;left=5;qEls.forEach(q=>q.e.remove());meEl.style.display='none';tool=ext>0?'ext':'tank';
+say('불이 났어요! 5초 안에 못 끄면 불이 2배로 커져요! 소화기는 작은 불에만 쓸 수 있어요. 큰 불은 물탱크🛢️ 터치 → 불 터치로 호스를 연결하세요. 📞 119 신고도 잊지 마세요!');bar();
+tanks.forEach(t=>t.e.onpointerdown=ev=>{ev.stopPropagation();if(phase!='fire')return;selT=t;tool='tank';tanks.forEach(x=>x.e.classList.toggle('sel',x===t));say('물탱크 선택! 이제 불을 터치해 호스를 연결하세요.');bar()});
+FP.forEach(p=>{const e=ent('<i class="au"></i><span class="e">🔥</span><span class="cd">5</span>','fire',p[0],p[1]);const f={e,x:p[0],y:p[1],big:false,lvl:1,out:false,n:5};
+f.iv=setInterval(()=>{if(f.out)return;f.n--;if(f.n>0){e.querySelector('.cd').textContent=f.n}else{clearInterval(f.iv);grow(f)}},1000);
+e.onpointerdown=ev=>{ev.stopPropagation();if(f.out||phase!='fire')return;
+if(tool=='ext'){if(f.big)say('소화기는 작은 불에만 쓸 수 있어요! 물탱크 호스를 연결하세요.');else if(ext>0){ext--;put(f)}else say('소화기가 없어요!')}
+else if(!selT)say('먼저 설치한 물탱크 🛢️를 터치해 선택하세요.');
+else if(tankUses<=0)say('물탱크의 물이 다 떨어졌어요!');
+else if(Math.hypot((selT.x-f.x)*9,(selT.y-f.y)*6.34)>RANGE)say('호스가 닿지 않아요! 더 가까운 물탱크를 선택하세요.');
+else{hose(selT,f);tankUses--;put(f)}
+bar()};fires.push(f)});
+wrap.scrollTo({left:100,top:60});check();bt=setInterval(burn,500);gi=setInterval(()=>{fires.forEach(f=>{if(!f.out&&f.big){f.lvl++;sz(f)}});if(phase=='fire')warn('🔥 15초가 지났어요!<br>불이 더 커졌어요!')},15000)}
+function hose(t,f){const l=document.createElementNS('http://www.w3.org/2000/svg','line');
+[['x1',t.x*9],['y1',t.y*6.34],['x2',f.x*9],['y2',f.y*6.34],['stroke','#2a7de1'],['stroke-width',7],['stroke-linecap','round'],['stroke-dasharray','12 8']].forEach(a=>l.setAttribute(a[0],a[1]));
+$('#hs').appendChild(l);setTimeout(()=>l.remove(),900)}
+function grow(f){f.big=true;f.lvl=2;f.e.classList.add('big');sz(f);
+const a=$('#alert');a.innerHTML='⚠️ 화재 주의!<br>불의 크기와 세기가 2배가 되었어요!<br>물탱크 호스로만 끌 수 있어요';a.style.display='block';clearTimeout(a.t);a.t=setTimeout(()=>a.style.display='none',2500);check()}
+function put(f){if(f.out)return;f.out=true;clearInterval(f.iv);f.e.querySelector('.e').textContent='💨';f.e.querySelector('.cd').style.display='none';setTimeout(()=>f.e.remove(),500);left--;check()}
+function end(h){phase='end';clearInterval(gt);clearInterval(bt);clearInterval(gi);clearInterval(ci);fires.forEach(f=>clearInterval(f.iv));$('#bar').innerHTML='';show(h);$('#rs').onclick=()=>location.reload()}
+function thanks(){phase='end';clearInterval(gt);clearInterval(bt);clearInterval(gi);clearInterval(ci);$('#bar').innerHTML='';say('🎉 불을 모두 껐어요!');wrap.scrollTo({left:(900-wrap.clientWidth)/2,top:150});
+[[40,42,'👵'],[56,60,'👨'],[72,44,'👩'],[30,62,'🧒']].forEach((p,i)=>setTimeout(()=>ent(`<span class="e">🏠</span><span class="pp">${p[2]}<small>감사합니다!</small></span>`,'',p[0],p[1]),i*600));
+setTimeout(()=>{show(`<h3>🎉 마을을 지켰어요!</h3><p>집에서 나온 주민들이 "감사합니다!" 하고 인사했어요.</p><p>🎁 우리는 감사의 마음으로 주민들에게 <b>투척용 소화기 🧯</b>를 선물로 드렸어요. 마을이 더 안전해졌어요!</p><button class="p" id="rs">다시 하기</button>`);$('#rs').onclick=()=>location.reload()},3400)}
+function check(){if(phase!='fire')return;if(left==0)return thanks();
+const pend=fires.filter(f=>!f.out);
+const can=(ext>0&&pend.some(f=>!f.big))||(tankUses>0&&pend.some(f=>tanks.some(t=>Math.hypot((t.x-f.x)*9,(t.y-f.y)*6.34)<=RANGE)));
+if(!can)say('⚠️ 지금 쓸 수 있는 소화 수단이 부족해요!')}
+upd();intro();
+</script></body></html>
